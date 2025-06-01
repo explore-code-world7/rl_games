@@ -29,7 +29,7 @@ class AdaptiveScheduler(RLScheduler):
             lr = max(current_lr / 1.5, self.min_lr)
         if kl_dist < (0.5 * self.kl_threshold):
             lr = min(current_lr * 1.5, self.max_lr)
-        return lr, entropy_coef         
+        return lr, entropy_coef
 
 
 class LinearScheduler(RLScheduler):

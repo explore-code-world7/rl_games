@@ -28,6 +28,9 @@ class NetworkBuilder:
     def __call__(self, name, **kwargs):
         return self.build(name, **kwargs)
 
+    # 1. init define a series of layers
+    # 2. 没有forward函数
+    # 3. _build_xxx定义serial submodule
     class BaseNetwork(nn.Module):
         def __init__(self, **kwargs):
             nn.Module.__init__(self, **kwargs)
@@ -166,6 +169,7 @@ class NetworkBuilder:
                 layers.append(torch.nn.Flatten())
             return nn.Sequential(*layers)
 
+        # convs包含那些信息?
         def _build_cnn1d(self, input_shape, convs, activation, norm_func_name=None):
             print('conv1d input shape:', input_shape)
             in_channels = input_shape[0]
@@ -192,7 +196,7 @@ class NetworkBuilder:
             raise ValueError('value type is not "default", "legacy" or "two_hot_encoded"')
 
 
-
+# define nothing
 class A2CBuilder(NetworkBuilder):
     def __init__(self, **kwargs):
         NetworkBuilder.__init__(self)
@@ -208,12 +212,14 @@ class A2CBuilder(NetworkBuilder):
             self.num_seqs = num_seqs = kwargs.pop('num_seqs', 1)
 
             NetworkBuilder.BaseNetwork.__init__(self)
+            # defines lots of sub-layers
             self.load(params)
             self.actor_cnn = nn.Sequential()
             self.critic_cnn = nn.Sequential()
             self.actor_mlp = nn.Sequential()
             self.critic_mlp = nn.Sequential()
-            
+
+            # 构建cnn
             if self.has_cnn:
                 if self.permute_input:
                     input_shape = torch_ext.shape_whc_to_cwh(input_shape)
@@ -237,6 +243,7 @@ class A2CBuilder(NetworkBuilder):
             else:
                 out_size = self.units[-1]
 
+            # construct rnn for observarion lstm preprocessing
             if self.has_rnn:
                 if not self.is_rnn_before_mlp:
                     rnn_in_size = out_size
@@ -264,6 +271,7 @@ class A2CBuilder(NetworkBuilder):
                     if self.rnn_ln:
                         self.layer_norm = torch.nn.LayerNorm(self.rnn_units)
 
+            # build mlp for actor and critic, values
             mlp_args = {
                 'input_size' : mlp_input_size,
                 'units' : self.units, 
@@ -299,10 +307,12 @@ class A2CBuilder(NetworkBuilder):
                 else:
                     self.sigma = torch.nn.Linear(out_size, actions_num)
 
+            # define netweight initialization function
             mlp_init = self.init_factory.create(**self.initializer)
             if self.has_cnn:
                 cnn_init = self.init_factory.create(**self.cnn['initializer'])
 
+            # initialize network weight
             for m in self.modules():         
                 if isinstance(m, nn.Conv2d) or isinstance(m, nn.Conv1d):
                     cnn_init(m.weight)
@@ -313,6 +323,7 @@ class A2CBuilder(NetworkBuilder):
                     if getattr(m, "bias", None) is not None:
                         torch.nn.init.zeros_(m.bias)    
 
+            # initialize action distribution params
             if self.is_continuous:
                 mu_init(self.mu.weight)
                 if self.fixed_sigma:
@@ -467,6 +478,7 @@ class A2CBuilder(NetworkBuilder):
                 if self.is_multi_discrete:
                     logits = [logit(out) for logit in self.logits]
                     return logits, value, states
+                # continuous function's output
                 if self.is_continuous:
                     mu = self.mu_act(self.mu(out))
                     if self.fixed_sigma:

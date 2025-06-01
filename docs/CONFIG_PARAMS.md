@@ -1,3 +1,3 @@
-# Yaml Config Description  
+# Yaml Config Description
 
 Coming.

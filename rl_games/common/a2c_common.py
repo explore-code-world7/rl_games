@@ -199,6 +199,7 @@ class A2CBase(BaseAlgorithm):
 
         self.e_clip = config['e_clip']
         self.clip_value = config['clip_value']
+        print(f"config = {config}")
         self.network = config['network']
         self.rewards_shaper = config['reward_shaper']
         self.num_agents = self.env_info.get('agents', 1)
@@ -469,6 +470,7 @@ class A2CBase(BaseAlgorithm):
             'has_central_value' : self.has_central_value,
             'use_action_masks' : self.use_action_masks
         }
+        print(f"a2c_common.py: env_info = \n {self.env_info}")
         self.experience_buffer = ExperienceBuffer(self.env_info, algo_info, self.ppo_device)
 
         val_shape = (self.horizon_length, batch_size, self.value_size)
@@ -1104,7 +1106,6 @@ class DiscreteA2CBase(A2CBase):
                         self.writer.add_scalar('shaped_' + rewards_name + '/step'.format(i), mean_shaped_rewards[i], frame)
                         self.writer.add_scalar('shaped_' + rewards_name + '/iter'.format(i), mean_shaped_rewards[i], epoch_num)
                         self.writer.add_scalar('shaped_' + rewards_name + '/time'.format(i), mean_shaped_rewards[i], total_time)
-
 
                     self.writer.add_scalar('episode_lengths/step', mean_lengths, frame)
                     self.writer.add_scalar('episode_lengths/iter', mean_lengths, epoch_num)

@@ -34,6 +34,9 @@ class BaseModel():
             normalize_value=normalize_value, normalize_input=normalize_input, value_size=value_size)
 
 class BaseModelNetwork(nn.Module):
+    # 1. merely define pre/post-process network
+    # using params: obs_shape, normalize_value, normalize_input, value_size
+    # 2. define observation normalizatio, value denormalization method
     def __init__(self, obs_shape, normalize_value, normalize_input, value_size):
         nn.Module.__init__(self)
         self.obs_shape = obs_shape
@@ -56,7 +59,6 @@ class BaseModelNetwork(nn.Module):
     def denorm_value(self, value):
         with torch.no_grad():
             return self.value_mean_std(value, denorm=True) if self.normalize_value else value
-        
     
     def get_aux_loss(self):
         return None
@@ -223,6 +225,7 @@ class ModelA2CContinuous(BaseModel):
             is_train = input_dict.get('is_train', True)
             prev_actions = input_dict.get('prev_actions', None)
             input_dict['obs'] = self.norm_obs(input_dict['obs'])
+            # 这里的a2c_network是什么?
             mu, sigma, value, states = self.a2c_network(input_dict)
             distr = torch.distributions.Normal(mu, sigma, validate_args=False)
 
@@ -279,6 +282,7 @@ class ModelA2CContinuousLogStd(BaseModel):
         def forward(self, input_dict):
             is_train = input_dict.get('is_train', True)
             prev_actions = input_dict.get('prev_actions', None)
+            # norm_obs在BaseModelNetwork中定义
             input_dict['obs'] = self.norm_obs(input_dict['obs'])
             mu, logstd, value, states = self.a2c_network(input_dict)
             sigma = torch.exp(logstd)
@@ -300,7 +304,7 @@ class ModelA2CContinuousLogStd(BaseModel):
                 neglogp = self.neglogp(selected_action, mu, sigma, logstd)
                 result = {
                     'neglogpacs' : torch.squeeze(neglogp),
-                    'values' : self.denorm_value(value),
+                    'values' : self.denorm_value(value),        # denorm_value在BaseModelNetwork定义
                     'actions' : selected_action,
                     'rnn_states' : states,
                     'mus' : mu,
